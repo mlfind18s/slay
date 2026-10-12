@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Slay</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #0e0e14; color: #d6d6e6;
+    font-family: system-ui, -apple-system, sans-serif; font-size: 14px;
+    overflow: hidden;
+  }
+  #app { display: flex; width: 100%; height: 100%; }
+  #boardWrap { flex: 1; position: relative; min-width: 0; }
+  #board { display: block; width: 100%; height: 100%; background: #16202c; cursor: pointer; }
+  #panel {
+    width: 330px; flex: none; height: 100%; overflow-y: auto;
+    background: #14141c; border-left: 1px solid #2a2a3a;
+    padding: 12px; display: flex; flex-direction: column; gap: 10px;
+  }
+  h1 { font-size: 20px; display: flex; align-items: baseline; gap: 8px; }
+  h1 small { font-size: 12px; color: #8a8aa0; font-weight: 400; }
+  section, details { background: #1a1a24; border: 1px solid #2a2a3a; border-radius: 8px; padding: 10px; }
+  section h2, details summary {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: #8a8aa0; margin-bottom: 8px;
+  }
+  details summary { cursor: pointer; margin-bottom: 0; }
+  details[open] summary { margin-bottom: 8px; }
+  .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+  label { display: inline-flex; align-items: center; gap: 5px; color: #b8b8c8; font-size: 13px; }
+  input[type=number], select {
+    background: #0e0e14; color: #d6d6e6; border: 1px solid #2a2a3a; border-radius: 4px;
+    padding: 3px 6px; font-size: 13px; width: 60px;
+  }
+  select { width: auto; }
+  input[type=range] { width: 120px; }
+  button {
+    background: #2a2a3a; color: #e6e6f0; border: 1px solid #3a3a4e; border-radius: 6px;
+    padding: 6px 10px; font-size: 13px; cursor: pointer;
+  }
+  button:hover:not(:disabled) { background: #363650; }
+  button:disabled { opacity: .4; cursor: default; }
+  button.primary { background: #3b7ddd; border-color: #4d8ff0; }
+  button.primary:hover:not(:disabled) { background: #4d8ff0; }
+  button.active { background: #e2c23c; color: #111; border-color: #f0d15a; }
+  .swatch {
+    display: inline-block; width: 12px; height: 12px; border-radius: 3px;
+    border: 1px solid rgba(0,0,0,.4); vertical-align: -1px;
+  }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; margin-top: 6px; }
+  td, th { padding: 3px 4px; text-align: right; font-size: 13px; }
+  td:first-child, th:first-child { text-align: left; }
+  th { color: #8a8aa0; font-weight: 500; font-size: 11px; }
+  tr.current td { background: rgba(255,255,255,.07); }
+  tr.dead td { opacity: .4; text-decoration: line-through; }
+  #turnInfo { line-height: 1.5; }
+  #terrInfo { font-variant-numeric: tabular-nums; line-height: 1.5; }
+  .muted { color: #8a8aa0; }
+  .buy { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+  .buy .cost { color: #ffd54a; font-variant-numeric: tabular-nums; }
+  #playerKinds { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+  #playerKinds label { justify-content: space-between; }
+  #log { font-size: 12px; color: #b8b8c8; line-height: 1.4; max-height: 170px; overflow-y: auto; }
+  #log div { padding: 2px 0; border-bottom: 1px dashed #2a2a3a; }
+  #tooltip {
+    position: fixed; pointer-events: none; display: none; z-index: 5;
+    background: rgba(10,10,16,.94); border: 1px solid #3a3a4e; border-radius: 6px;
+    padding: 6px 9px; font-size: 12px; line-height: 1.45; white-space: nowrap;
+  }
+  #hint {
+    position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+    max-width: 96%; text-align: center; color: #8a8aa0; font-size: 12px; line-height: 1.4;
+    background: rgba(0,0,0,.4); padding: 5px 12px; border-radius: 8px;
+    pointer-events: none; user-select: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  @media (max-width: 1000px) { #hint { display: none; } }
+  kbd { background: #2a2a3a; border-radius: 3px; padding: 0 4px; font-size: 11px; color: #d6d6e6; }
+  #flash {
+    position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,.7); color: #ffd54a; padding: 6px 14px; border-radius: 8px;
+    font-size: 14px; opacity: 0; transition: opacity .3s; pointer-events: none;
+  }
+  #overlay {
+    position: absolute; inset: 0; display: none;
+    align-items: center; justify-content: center; flex-direction: column; gap: 14px;
+    background: rgba(0,0,0,.6); color: #fff; font-size: 28px; font-weight: 600; text-align: center;
+  }
+  #overlay small { font-size: 15px; font-weight: 400; color: #b8b8c8; }
+  code { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: #aeb6e0; }
+  #board { touch-action: manipulation; }
+  /* Phones in portrait (e.g. inside React Host): map on top, panel below and scrollable. */
+  @media (max-width: 700px) {
+    #app { flex-direction: column; }
+    #boardWrap { flex: 1 1 auto; min-height: 0; }
+    #panel {
+      width: 100%; height: auto; max-height: 42%; flex: 0 0 auto;
+      border-left: 0; border-top: 1px solid #2a2a3a; padding: 10px;
+    }
+    #panel button { min-height: 40px; }
+    #log { max-height: 120px; }
+  }
+  /* Touch screens: no hover, so the hover tooltip would stick after a tap. */
+  @media (hover: none) { #tooltip { display: none !important; } }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="boardWrap">
+    <canvas id="board"></canvas>
+    <div id="hint">Клік — територія / юніт / ціль · подвійний клік — назвати місто чи замок · <kbd>1</kbd>–<kbd>4</kbd> купити юніта · <kbd>C</kbd> замок · <kbd>Enter</kbd> кінець ходу · <kbd>Z</kbd> скасувати · <kbd>Esc</kbd> зняти · <kbd>P</kbd> пауза · <kbd>F</kbd> до кінця · <kbd>N</kbd> нова гра</div>
+    <div id="flash"></div>
+    <div id="overlay">
+      <div id="overlayText"></div>
+      <small id="overlaySub"></small>
+      <button id="overlayNew" class="primary">Нова гра</button>
+    </div>
+  </div>
+
+  <aside id="panel">
+    <h1>Slay <small>гексова стратегія · пісочниця</small></h1>
+
+    <section>
+      <div id="turnInfo"></div>
+      <table id="players">
+        <thead><tr><th>Гравець</th><th>Гекси</th><th>Тер.</th><th>Гроші</th><th>Юніти</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="row" style="margin-top:8px; margin-bottom:0">
+        <button id="endTurn" class="primary">Завершити хід</button>
+        <button id="undo">Скасувати</button>
+        <button id="pause">Пауза</button>
+        <button id="fastForward" title="Дограти всі ходи комп'ютера миттєво">До кінця</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Територія</h2>
+      <div id="terrInfo"></div>
+      <div class="buy">
+        <button class="buyBtn" data-level="1">Селянин · <span class="cost"></span></button>
+        <button class="buyBtn" data-level="2">Списник · <span class="cost"></span></button>
+        <button class="buyBtn" data-level="3">Лицар · <span class="cost"></span></button>
+        <button class="buyBtn" data-level="4">Барон · <span class="cost"></span></button>
+        <button id="castleBtn">Замок · <span class="cost"></span></button>
+        <button id="nameBtn" title="Або подвійний клік по місту чи замку на карті">Назвати місто</button>
+      </div>
+      <div class="muted" style="font-size:12px; margin-top:8px; line-height:1.4">
+        Платня за хід: 2 / 6 / 18 / 54. Захоплення можливе, якщо рівень юніта більший за захист гекса.
+        Столиця захищає на 1, замок на 2, юніт — на свій рівень (сусідні гекси теж).
+      </div>
+    </section>
+
+    <details open>
+      <summary>Нова гра</summary>
+      <div class="row">
+        <label>Гравців
+          <select id="playerCount">
+            <option>2</option><option>3</option><option>4</option>
+            <option>5</option><option selected>6</option>
+          </select>
+        </label>
+        <label>Ширина <input id="mapW" type="number" value="20" min="6" max="60"></label>
+        <label>Висота <input id="mapH" type="number" value="14" min="6" max="40"></label>
+      </div>
+      <div id="playerKinds"></div>
+      <div class="row">
+        <label>Суша % <input id="land" type="number" value="62" min="20" max="100"></label>
+        <label>Дерева % <input id="trees" type="number" value="8" min="0" max="60"></label>
+        <label>Seed <input id="seed" type="number" placeholder="випадково" style="width:100px"></label>
+      </div>
+      <div class="row">
+        <label>Затримка AI <input id="aiDelay" type="range" min="0" max="1500" step="50" value="300"> <span id="aiDelayVal"></span> мс</label>
+      </div>
+      <div class="row" style="margin-bottom:0">
+        <button id="newGame" class="primary">Нова гра</button>
+        <button id="save">Зберегти</button>
+        <button id="load">Завантажити</button>
+      </div>
+    </details>
+
+    <section>
+      <h2>Журнал</h2>
+      <div id="log"></div>
+    </section>
+
+    <section>
+      <h2>Для експериментів (консоль)</h2>
+      <div class="muted" style="font-size:12px; line-height:1.5">
+        <code>Slay.game</code> — стан гри, <code>Slay.RULES</code> — правила,<br>
+        <code>Slay.AI.custom[i] = (game, id) =&gt; {...}</code> — свій AI,<br>
+        <code>Slay.hooks.afterTurn</code> — гачки, <code>Slay.simulate({seed:1})</code> — прогін без UI.<br>
+        Детальніше в README.md.
+      </div>
+    </section>
+  </aside>
+</div>
+<div id="tooltip"></div>
+
+<script src="js/hex.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/render.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

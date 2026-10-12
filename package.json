@@ -1,0 +1,9 @@
+{
+  "name": "slay",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Slay — гексова стратегія в браузері; пакет для React Host",
+  "scripts": {
+    "package": "node scripts/package.mjs"
+  }
+}
